@@ -18,6 +18,7 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Future<void> _authenticate() async {
+
     bool check = await AuthServices().authenticateLocally();
     if (check) {
       Navigator.pushReplacement(

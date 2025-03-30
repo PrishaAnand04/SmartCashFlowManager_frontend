@@ -1,7 +1,6 @@
-
 import 'dart:math';
 import 'package:http/http.dart' as http;
-/*import 'dart:nativewrappers/_internal/vm/lib/internal_patch.dart';*/
+//import 'dart:nativewrappers/_internal/vm/lib/internal_patch.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'categories_page.dart';

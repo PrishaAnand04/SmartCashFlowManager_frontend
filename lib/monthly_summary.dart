@@ -5,21 +5,64 @@ import 'categories_page.dart';
 import 'ai_recommendation.dart';
 import 'settings.dart';
 
-class MonthlySummaryPage extends StatelessWidget {
+class MonthlySummaryPage extends StatefulWidget {
+  @override
+  _MonthlySummaryPageState createState() => _MonthlySummaryPageState();
+}
+
+class _MonthlySummaryPageState extends State<MonthlySummaryPage> {
+  String? selectedCategory;
+  final Map<String, Color> categoryColors = {
+    'Shopping': Colors.green,
+    'Travel': Colors.purple,
+    'Food': Colors.orange,
+    'Entertainment': Colors.red,
+    'Subscriptions': Colors.brown,
+    'Savings': Colors.blue,
+    'Essentials': Colors.grey,
+    'Miscellaneous': Colors.yellow,
+  };
+
+  List<PieChartSectionData> getSections() {
+    return categoryColors.keys.map((category) {
+      final isSelected = selectedCategory == null || selectedCategory == category;
+      return PieChartSectionData(
+        value: _getValueForCategory(category),
+        title: '',
+        color: isSelected ? categoryColors[category] : categoryColors[category]!.withOpacity(0.2),
+        radius: isSelected ? 115 : 110,
+      );
+    }).toList();
+  }
+
+  double _getValueForCategory(String category) {
+    switch (category) {
+      case 'Shopping': return 12;
+      case 'Travel': return 200;
+      case 'Food': return 19;
+      case 'Entertainment': return 263;
+      case 'Subscriptions': return 10;
+      case 'Savings': return 430;
+      case 'Essentials': return 20;
+      case 'Miscellaneous': return 57;
+      default: return 0;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Predicted Monthly Summary'),
+        title: Text('Monthly Expenses by Category'),
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
+        automaticallyImplyLeading: false,
         titleTextStyle: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
           color: Colors.black,
         ),
-        automaticallyImplyLeading: false, // Removed back arrow
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -27,96 +70,87 @@ class MonthlySummaryPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DropdownButton<String>(
-              items: ['Saving and Transfer', 'Shopping', 'Food and Dining', 'Travel and Transportation', 'Miscellaneous', 'Essential', 'Entertainment', 'Subscription and Services']
-                  .map((category) => DropdownMenuItem<String>(
-                value: category,
-                child: Text(category),
-              ))
-                  .toList(),
-              onChanged: (value) {},
-              hint: Text('Select'),
+              items: [
+                DropdownMenuItem(
+                  value: null,
+                  child: Text('Select'),
+                ),
+                ...categoryColors.keys.map((category) => DropdownMenuItem(
+                  value: category,
+                  child: Text(category),
+                ))
+              ],
+              onChanged: (value) => setState(() => selectedCategory = value),
+              value: selectedCategory,
+              hint: Text('Select Category'),
               isExpanded: true,
-              underline: Container(
-                height: 1,
-                color: Colors.grey.shade300,
+              underline: Container(height: 1, color: Colors.grey.shade300),
+            ),
+            // ... Rest of the body remains unchanged
+            SizedBox(height: 20),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Largest Expense: ₹5,000 on Essentials",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  "You've saved ₹10,000 more this month than last.",
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                ),
+              ],
+            ),
+            SizedBox(height: 20),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                children: categoryColors.entries.map((entry) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: entry.value,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Text(entry.key, style: TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                )).toList(),
               ),
             ),
-            SizedBox(height: 16),
-            Text(
-              "Largest Expense: ₹5,000 on Essentials",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 16),
-            Text(
-              "You've saved ₹10,000 more this month than last.",
-              style: TextStyle(fontSize: 16),
-            ),
-            SizedBox(height: 32),
+            SizedBox(height: 20),
             Expanded(
-              child: PieChart(
-                PieChartData(
-                  sections: [
-                    PieChartSectionData(
-                      value: 12, // Corresponds to "Shopping"
-                      title: 'Shopping',
-                      color: Colors.green,
-                      radius: 170,
-                    ),
-                    PieChartSectionData(
-                      value: 200, // Corresponds to "Travel"
-                      title: 'Travel',
-                      color: Colors.purple,
-                      radius: 170,
-                    ),
-                    PieChartSectionData(
-                      value: 19, // Corresponds to "Food"
-                      title: 'Food',
-                      color: Colors.orange,
-                      radius: 170,
-                    ),
-                    PieChartSectionData(
-                      value: 263, // Extra Data Point from LineChart
-                      title: 'Entertainment',
-                      color: Colors.red,
-                      radius: 170,
-                    ),
-                    PieChartSectionData(
-                      value: 10, // Extra Data Point from LineChart
-                      title: 'Subscriptions',
-                      color: Colors.brown,
-                      radius: 170,
-                    ),
-                    PieChartSectionData(
-                      value: 430, // Extra Data Point from LineChart
-                      title: 'Savings',
-                      color: Colors.blue,
-                      radius: 170,
-                    ),
-                    PieChartSectionData(
-                      value: 20, // Extra Data Point from LineChart
-                      title: 'Essentials',
-                      color: Colors.grey,
-                      radius: 170,
-                    ),
-                    PieChartSectionData(
-                      value: 57, // Extra Data Point from LineChart
-                      title: 'Miscellaneous',
-                      color: Colors.yellow,
-                      radius: 170,
-                    ),
-                  ],
-                  sectionsSpace: 2, // Space between pie sections
-                  centerSpaceRadius: 0, // Center empty space
-                ), // PieChartData ends here
-              ), // PieChart ends here
+              child: Center(
+                child: PieChart(
+                  PieChartData(
+                    sections: getSections(),
+                    sectionsSpace: 0,
+                    centerSpaceRadius: 0,
+                    startDegreeOffset: -90,
+                  ),
+                ),
+              ),
             ),
           ],
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
+        // ... Bottom navigation bar remains unchanged
         selectedItemColor: Colors.green,
         unselectedItemColor: Colors.grey,
-        currentIndex: 3, // Highlight Reports tab
+        currentIndex: 3,
         onTap: (int index) {
           if (index == 0) {
             Navigator.pushReplacement(

@@ -1,28 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart'; // For charts
+import 'package:fl_chart/fl_chart.dart';
 import 'home_page.dart';
 import 'ai_recommendation.dart';
 import 'monthly_summary.dart';
 import 'settings.dart';
 
-
 class CategoriesPage extends StatelessWidget {
-  final List<String> categories = [
-    'Saving and Transfer',
-    'Shopping',
-    'Food and Dining',
-    'Travel and Transportation',
-    'Miscellaneous',
-    'Essential',
-    'Entertainment',
-    'Subscription and Services'
-  ];
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Categories'),
+        title: Text('Monthly Expenses'),
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -38,44 +26,12 @@ class CategoriesPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            DropdownButton<String>(
-              items: categories
-                  .map(
-                    (category) => DropdownMenuItem<String>(
-                  value: category,
-                  child: Text(
-                    category,
-                    style: TextStyle(
-                      color: Colors.black.withOpacity(0.7),
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              )
-                  .toList(),
-              onChanged: (value) {
-                // Handle dropdown selection
-              },
-              hint: Text(
-                "Select",
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 16,
-                ),
-              ),
-              isExpanded: true,
-              underline: Container(
-                height: 1,
-                color: Colors.grey.shade300,
-              ),
-              dropdownColor: Colors.grey.shade100,
-            ),
-            SizedBox(height: 16),
+            // Removed DropdownButton
             Text(
               "Total Spent: ₹10,500",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 4),
+            SizedBox(height: 8), // Reduced spacing
             Text(
               "Most spending on essentials",
               style: TextStyle(fontSize: 14, color: Colors.grey),
@@ -90,22 +46,29 @@ class CategoriesPage extends StatelessWidget {
               "Total Expense: ₹15,000",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 32), // Spacing before the line graph
+            SizedBox(height: 24), // Adjusted spacing
             Expanded(
               child: LineChart(
                 LineChartData(
                   gridData: FlGridData(show: true),
                   titlesData: FlTitlesData(
+                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(showTitles: true),
                     ),
+                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
                         getTitlesWidget: (value, meta) {
                           const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May'];
-                          return Text(labels[value.toInt()]);
+                          if(value%1==0){
+                            return Text((labels[value.toInt()]));
+                          }
+                          return const SizedBox.shrink();
                         },
+                        interval: 1,
+                        reservedSize: 30,
                       ),
                     ),
                   ),
@@ -113,7 +76,7 @@ class CategoriesPage extends StatelessWidget {
                   minX: 0,
                   maxX: 4,
                   minY: 0,
-                  maxY: 10,
+                  maxY: 9,
                   lineBarsData: [
                     LineChartBarData(
                       spots: [
@@ -141,7 +104,7 @@ class CategoriesPage extends StatelessWidget {
       bottomNavigationBar: BottomNavigationBar(
         selectedItemColor: Colors.green,
         unselectedItemColor: Colors.grey,
-        currentIndex: 1, // Highlight Categories tab
+        currentIndex: 1,
         onTap: (int index) {
           if (index == 0) {
             Navigator.push(
@@ -173,8 +136,6 @@ class CategoriesPage extends StatelessWidget {
               MaterialPageRoute(builder: (context) => SettingsPage()),
             );
           }
-
-
         },
         items: const [
           BottomNavigationBarItem(

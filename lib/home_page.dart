@@ -196,6 +196,9 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ],
                     titlesData: FlTitlesData(
+                      topTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
                       leftTitles: AxisTitles(
                           sideTitles: SideTitles(showTitles: true,reservedSize: 30)),
                       bottomTitles: AxisTitles(
@@ -205,7 +208,7 @@ class _HomePageState extends State<HomePage> {
                           getTitlesWidget: (double value, TitleMeta meta) {
                             const categories = ['Saving', 'Shopping', 'Food', 'Travel', 'Misc.', 'Essential', 'Lifestyle', 'Subscription'];
                             return Padding(
-                              padding: EdgeInsets.only(top: 8.0),
+                              padding: const EdgeInsets.only(top:8.0),
                               child: Transform.rotate(angle: -0.5,
                                 child: Text(
                                   categories[value.toInt()],

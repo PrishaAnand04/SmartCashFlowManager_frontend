@@ -1,10 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'home_page.dart';
 import 'categories_page.dart';
 import 'monthly_summary.dart';
 import 'settings.dart';
 
 class AiRecommendationPage extends StatelessWidget {
+  // Sample data for the chart (current vs recommended)
+  final Map<String, List<double>> categoryData = {
+    'Food': [4500, 3500],
+    'Lifestyle': [3000, 2200],
+    'Shopping': [2500, 1800],
+    'Misc.': [1500, 1000],
+    'Subscription': [800, 500],
+    'Travel': [2000, 1500],
+  };
+
+  final Color currentColor = Colors.blue[400]!;
+  final Color recommendedColor = Colors.green[400]!;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -26,6 +40,76 @@ class AiRecommendationPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
+              "Spending Analysis",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 20),
+            Container(
+              height: 300,
+              child: BarChart(
+                BarChartData(
+                  alignment: BarChartAlignment.spaceAround,
+                  maxY: 5000,
+                  barTouchData: BarTouchData(enabled: false),
+                  titlesData: FlTitlesData(
+                    show: true,
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          final index = value.toInt();
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              categoryData.keys.elementAt(index),
+                              style: TextStyle(fontSize: 12),textAlign: TextAlign.center,
+                            ),
+                          );
+                        },
+                        reservedSize: 40,
+                      ),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        interval: 1000,
+                      ),
+                    ),
+                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false),),
+                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false),),
+                  ),
+                  gridData: FlGridData(show: false),
+                  borderData: FlBorderData(show: false),
+                  barGroups: categoryData.keys.map((category) {
+                    final index = categoryData.keys.toList().indexOf(category);
+                    return BarChartGroupData(
+                      x: index,
+                      groupVertically: false,
+                      barsSpace: 0,
+                      barRods: [
+                        BarChartRodData(
+                          toY: categoryData[category]![0],
+                          color: currentColor,
+                          width: 20,
+                          borderRadius: BorderRadius.circular(1.5),
+                        ),
+                        BarChartRodData(
+                          toY: categoryData[category]![1],
+                          color: recommendedColor,
+                          width: 20,
+                          borderRadius: BorderRadius.circular(1.5),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                  groupsSpace: 24
+                ),
+              ),
+            ),
+            SizedBox(height: 20),
+            _buildLegend(),
+            SizedBox(height: 20),
+            Text(
               "AI Recommendations for You",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
@@ -34,21 +118,13 @@ class AiRecommendationPage extends StatelessWidget {
               "Reduce Spending on Fast Food",
               "Consider home-cooked meals to save ₹1,500 per month.",
             ),
-            _buildRecommendationCard(
-              "Increase Savings by 10%",
-              "Move ₹2,000 into your savings account this month.",
-            ),
-            _buildRecommendationCard(
-              "Switch to a Budget Mobile Plan",
-              "You can save ₹500/month by switching providers.",
-            ),
           ],
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         selectedItemColor: Colors.green,
         unselectedItemColor: Colors.grey,
-        currentIndex: 2, // Highlight AI Insights tab
+        currentIndex: 2,
         onTap: (int index) {
           if (index == 0) {
             Navigator.push(
@@ -60,23 +136,21 @@ class AiRecommendationPage extends StatelessWidget {
               context,
               MaterialPageRoute(builder: (context) => CategoriesPage()),
             );
-          }
-          else if (index == 2) {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => AiRecommendationPage()));
-          }
-          else if (index == 3) {
+          } else if (index == 2) {
+            Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AiRecommendationPage()));
+          } else if (index == 3) {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => MonthlySummaryPage()),
             );
-          }
-          else if (index == 4) {
+          } else if (index == 4) {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => SettingsPage()),
             );
           }
-
         },
         items: const [
           BottomNavigationBarItem(
@@ -101,6 +175,31 @@ class AiRecommendationPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildLegend() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildLegendItem("Current Spending", currentColor),
+        SizedBox(width: 20),
+        _buildLegendItem("Recommended Target", recommendedColor),
+      ],
+    );
+  }
+
+  Widget _buildLegendItem(String text, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 16,
+          height: 16,
+          color: color,
+        ),
+        SizedBox(width: 8),
+        Text(text),
+      ],
     );
   }
 

@@ -53,7 +53,7 @@ class _MonthlySummaryPageState extends State<MonthlySummaryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Monthly Expenses by Category'),
+        title: Text('Expected Monthly Expenses by Category'),
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,

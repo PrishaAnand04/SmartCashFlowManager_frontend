@@ -192,7 +192,7 @@ class _HomePageState extends State<HomePage> {
                   child: OutlinedButton(
                     onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => SetGoalPage())),
                     style: OutlinedButton.styleFrom(side: BorderSide(color: Colors.green)),
-                    child: Text("Set Financial Goal", style: TextStyle(color: Colors.green)),
+                    child: Text("Set Financial Goal", style: TextStyle(color: Colors.green),textAlign: TextAlign.center,),
                   ),
                 ),
               ],

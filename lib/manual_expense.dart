@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
-import 'home_page.dart'; // Import the home page
+import 'package:http/http.dart' as http; // Add this import
+import 'dart:convert'; // For JSON encoding
+import 'home_page.dart';
+import 'models/manual_money_model.dart';
+import 'services/manual_money_api.dart';
 
 void main() {
   runApp(ManualExpensePage());
@@ -34,31 +38,53 @@ class _ExpenseEntryPageState extends State<ExpenseEntryPage> {
     });
   }
 
-  void _saveExpense() {
+  // Modified: Added API call here
+  Future<void> _saveExpense() async {
     if (expenseNameController.text.isNotEmpty &&
         expenseMonthController.text.isNotEmpty &&
         expenseAmountController.text.isNotEmpty) {
-      setState(() {
-        expenses.add({
+      try {
+        // Create data map
+        final data = {
           'expenseName': expenseNameController.text,
           'expenseMonth': expenseMonthController.text,
           'expenseAmount': expenseAmountController.text,
+        };
+
+        // Call API
+        await ManualApi.addexpense(data);
+
+        // Update UI only after successful API call
+        setState(() {
+          expenses.add(data);
+          _clearControllers();
+          isAddingExpense = false;
         });
 
-        expenseNameController.clear();
-        expenseMonthController.clear();
-        expenseAmountController.clear();
-        isAddingExpense = false;
-      });
+        // Show success feedback
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Expense saved successfully!')),
+        );
+
+      } catch (e) {
+        // Show error feedback
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save expense: ${e.toString()}')),
+        );
+      }
     }
+  }
+
+  void _clearControllers() {
+    expenseNameController.clear();
+    expenseMonthController.clear();
+    expenseAmountController.clear();
   }
 
   void _cancelExpense() {
     setState(() {
       isAddingExpense = false;
-      expenseNameController.clear();
-      expenseMonthController.clear();
-      expenseAmountController.clear();
+      _clearControllers();
     });
   }
 
@@ -71,12 +97,10 @@ class _ExpenseEntryPageState extends State<ExpenseEntryPage> {
         actions: [
           IconButton(
             icon: Icon(Icons.arrow_forward, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => HomePage()),
-              );
-            },
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => HomePage()),
+            ),
           ),
         ],
       ),
@@ -94,7 +118,7 @@ class _ExpenseEntryPageState extends State<ExpenseEntryPage> {
               )
                   : ListView(
                 children: [
-                  ...expenses.map((expense) => _buildExpenseCard(expense)).toList(),
+                  ...expenses.map((expense) => _buildExpenseCard(expense)),
                   if (isAddingExpense) _buildExpenseForm(),
                 ],
               ),
@@ -106,6 +130,7 @@ class _ExpenseEntryPageState extends State<ExpenseEntryPage> {
     );
   }
 
+  // Rest of your UI components remain the same...
   Widget _buildExpenseForm() {
     return Card(
       elevation: 4,
@@ -125,8 +150,7 @@ class _ExpenseEntryPageState extends State<ExpenseEntryPage> {
               children: [
                 ElevatedButton(
                   onPressed: _saveExpense,
-                  style:
-                  ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
                   child: Text("Done", style: TextStyle(color: Colors.white)),
                 ),
                 OutlinedButton(
@@ -175,7 +199,7 @@ class _ExpenseEntryPageState extends State<ExpenseEntryPage> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: _addExpense,
+        onPressed: _addExpense, // Simplified: Just show the form
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.green,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

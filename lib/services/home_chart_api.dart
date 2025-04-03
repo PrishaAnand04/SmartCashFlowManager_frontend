@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import '../models/home_chart_model.dart';
 
 class HomeChartApi {
-  static const String _baseUrl = 'http://10.0.2.2:3000/api/home';
+  static const String _baseUrl = 'http://192.168.100.107:3000';
 
   static Future<List<HomeChartData>> getChartData() async {
     try {

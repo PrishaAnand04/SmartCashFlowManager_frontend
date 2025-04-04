@@ -16,4 +16,15 @@ class GoalApi {
       throw Exception('Failed to add goal');
     }
   }
+
+  static Future<List<GoalModel>> getGoals() async {
+    final response = await http.get(Uri.parse('$_baseUrl/getgoals'));
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body)['goals'];
+      return data.map((goal) => GoalModel.fromJson(goal)).toList();
+    } else {
+      throw Exception('Failed to load goals');
+    }
+  }
 }

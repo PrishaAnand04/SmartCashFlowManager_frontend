@@ -25,17 +25,37 @@ class GoalSettingPage extends StatefulWidget {
 }
 
 class _GoalSettingPageState extends State<GoalSettingPage> {
-  List<Map<String, String>> goals = [];
+  List<GoalModel> goals = [];
   bool isAddingGoal = false;
+  bool isLoading = true;
 
   final TextEditingController goalNameController = TextEditingController();
   final TextEditingController targetAmountController = TextEditingController();
   final TextEditingController timeframeController = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+    _loadGoals();
+  }
+
+  Future<void> _loadGoals() async {
+    try {
+      final fetchedGoals = await GoalApi.getGoals();
+      setState(() {
+        goals = fetchedGoals;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load goals: ${e.toString()}')),
+      );
+    }
+  }
+
   void _addGoal() {
-    setState(() {
-      isAddingGoal = true;
-    });
+    setState(() => isAddingGoal = true);
   }
 
   Future<void> _saveGoal() async {
@@ -50,12 +70,10 @@ class _GoalSettingPageState extends State<GoalSettingPage> {
         };
 
         await GoalApi.addGoal(data);
+        await _loadGoals(); // Refresh list from server
 
-        setState(() {
-          goals.add(data);
-          _clearControllers();
-          isAddingGoal = false;
-        });
+        _clearControllers();
+        setState(() => isAddingGoal = false);
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Goal saved successfully!')),
@@ -90,12 +108,10 @@ class _GoalSettingPageState extends State<GoalSettingPage> {
         actions: [
           IconButton(
             icon: Icon(Icons.arrow_forward, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => HomePage()),
-              );
-            },
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => HomePage()),
+            ),
           ),
         ],
       ),
@@ -104,7 +120,9 @@ class _GoalSettingPageState extends State<GoalSettingPage> {
         child: Column(
           children: [
             Expanded(
-              child: goals.isEmpty && !isAddingGoal
+              child: isLoading
+                  ? Center(child: CircularProgressIndicator())
+                  : goals.isEmpty && !isAddingGoal
                   ? Center(
                 child: Text(
                   "No goals set yet!",
@@ -113,7 +131,7 @@ class _GoalSettingPageState extends State<GoalSettingPage> {
               )
                   : ListView(
                 children: [
-                  ...goals.map((goal) => _buildGoalCard(goal)).toList(),
+                  ...goals.map((goal) => _buildGoalCard(goal)),
                   if (isAddingGoal) _buildGoalForm(),
                 ],
               ),
@@ -176,15 +194,15 @@ class _GoalSettingPageState extends State<GoalSettingPage> {
     );
   }
 
-  Widget _buildGoalCard(Map<String, String> goal) {
+  Widget _buildGoalCard(GoalModel goal) {
     return Card(
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: ListTile(
-        title: Text(goal['goalName']!,
+        title: Text(goal.goalName,
             style: TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(
-            "Target: ₹${goal['targetAmount']} • Timeframe: ${goal['timeframe']}"),
+            "Target: ₹${goal.targetAmount} • Timeframe: ${goal.timeframe}"),
       ),
     );
   }

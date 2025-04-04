@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
-import 'home_page.dart'; // Import the home page
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'home_page.dart';
+import 'models/goal_model.dart';
+import 'services/goal_api.dart';
 
 void main() {
   runApp(SetGoalPage());
@@ -34,31 +38,46 @@ class _GoalSettingPageState extends State<GoalSettingPage> {
     });
   }
 
-  void _saveGoal() {
+  Future<void> _saveGoal() async {
     if (goalNameController.text.isNotEmpty &&
         targetAmountController.text.isNotEmpty &&
         timeframeController.text.isNotEmpty) {
-      setState(() {
-        goals.add({
+      try {
+        final data = {
           'goalName': goalNameController.text,
           'targetAmount': targetAmountController.text,
           'timeframe': timeframeController.text,
+        };
+
+        await GoalApi.addGoal(data);
+
+        setState(() {
+          goals.add(data);
+          _clearControllers();
+          isAddingGoal = false;
         });
 
-        goalNameController.clear();
-        targetAmountController.clear();
-        timeframeController.clear();
-        isAddingGoal = false;
-      });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Goal saved successfully!')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save goal: ${e.toString()}')),
+        );
+      }
     }
+  }
+
+  void _clearControllers() {
+    goalNameController.clear();
+    targetAmountController.clear();
+    timeframeController.clear();
   }
 
   void _cancelGoal() {
     setState(() {
       isAddingGoal = false;
-      goalNameController.clear();
-      targetAmountController.clear();
-      timeframeController.clear();
+      _clearControllers();
     });
   }
 
@@ -125,8 +144,7 @@ class _GoalSettingPageState extends State<GoalSettingPage> {
               children: [
                 ElevatedButton(
                   onPressed: _saveGoal,
-                  style:
-                  ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
                   child: Text("Done", style: TextStyle(color: Colors.white)),
                 ),
                 OutlinedButton(
@@ -165,8 +183,8 @@ class _GoalSettingPageState extends State<GoalSettingPage> {
       child: ListTile(
         title: Text(goal['goalName']!,
             style: TextStyle(fontWeight: FontWeight.bold)),
-        subtitle:
-        Text("Target: ₹${goal['targetAmount']} • Timeframe: ${goal['timeframe']}"),
+        subtitle: Text(
+            "Target: ₹${goal['targetAmount']} • Timeframe: ${goal['timeframe']}"),
       ),
     );
   }

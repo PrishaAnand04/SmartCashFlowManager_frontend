@@ -1,11 +1,182 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'dart:async';  // Add this line
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:intl/intl.dart';
 import 'home_page.dart';
 import 'ai_recommendation.dart';
 import 'monthly_summary.dart';
 import 'settings.dart';
+import 'package:provider/provider.dart';
+import 'models/monthly_chart_data.dart'; // Renamed model
+import 'services/chart_data_service.dart'; // Renamed service
 
-class CategoriesPage extends StatelessWidget {
+class CategoriesPage extends StatefulWidget {
+  @override
+  _CategoriesPageState createState() => _CategoriesPageState();
+}
+
+class _CategoriesPageState extends State<CategoriesPage> {
+  late ChartDataService _chartDataService; // Renamed service
+  List<MonthlyChartData> _chartData = []; // Renamed model list
+  double _totalSpent = 0;
+  bool _isLoading = true;
+  String _errorMessage = '';
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _chartDataService = ChartDataService(baseUrl: 'http://192.168.100.107:3000');
+    _loadData();
+    _setupPolling();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final chartData = await _chartDataService.getMonthlyChartData();
+      final total = chartData.fold(0.0, (sum, item) => sum + item.value);
+
+      setState(() {
+        _chartData = chartData;
+        _totalSpent = total;
+        _isLoading = false;
+        _errorMessage = '';
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = e.toString();
+      });
+    }
+  }
+
+  void _setupPolling() {
+    _timer = Timer.periodic(Duration(seconds: 30), (timer) {
+      if (!mounted) return;
+      _loadData();
+    });
+  }
+
+  double _calculateMaxY() {
+    if (_chartData.isEmpty) return 10000;
+    final maxValue = _chartData.map((e) => e.value).reduce((a, b) => a > b ? a : b);
+    return (maxValue * 1.2).ceilToDouble();
+  }
+
+  Widget _buildChart() {
+    return LineChart(
+      LineChartData(
+        gridData: FlGridData(show: true),
+        titlesData: FlTitlesData(
+          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                return Text('₹${value.toInt()}');
+              },
+              reservedSize: 40,
+            ),
+          ),
+          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                if (value.toInt() < _chartData.length) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(_chartData[value.toInt()].month),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+              interval: 1,
+              reservedSize: 30,
+            ),
+          ),
+        ),
+        borderData: FlBorderData(show: true),
+        minX: 0,
+        maxX: _chartData.isNotEmpty ? (_chartData.length - 1).toDouble() : 0,
+        minY: 0,
+        maxY: _calculateMaxY(),
+        lineBarsData: [
+          LineChartBarData(
+            spots: _chartData.asMap().entries.map((entry) {
+              return FlSpot(
+                entry.key.toDouble(),
+                entry.value.value,
+              );
+            }).toList(),
+            isCurved: true,
+            barWidth: 4,
+            color: Colors.green,
+            belowBarData: BarAreaData(
+              show: true,
+              color: Colors.green.withOpacity(0.3),
+            ),
+            dotData: FlDotData(show: true),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorMessage.isNotEmpty) {
+      return Center(child: Text(_errorMessage));
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Total Spent: ₹${NumberFormat.currency(locale: 'en_IN', symbol: '').format(_totalSpent)}",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 8),
+          Text(
+            "Most spending in ${_getMostSpendingCategory()}",
+            style: TextStyle(fontSize: 14, color: Colors.grey),
+          ),
+          SizedBox(height: 16),
+          Text(
+            "List of transactions in this category",
+            style: TextStyle(fontSize: 16),
+          ),
+          SizedBox(height: 16),
+          Text(
+            "Total Expense: ₹${NumberFormat.currency(locale: 'en_IN', symbol: '').format(_totalSpent)}",
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 24),
+          Expanded(child: _buildChart()),
+        ],
+      ),
+    );
+  }
+
+  String _getMostSpendingCategory() {
+    if (_chartData.isEmpty) return 'essentials';
+    final maxEntry = _chartData.reduce((a, b) => a.value > b.value ? a : b);
+    return maxEntry.month;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -21,121 +192,25 @@ class CategoriesPage extends StatelessWidget {
         ),
         automaticallyImplyLeading: false,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Removed DropdownButton
-            Text(
-              "Total Spent: ₹10,500",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8), // Reduced spacing
-            Text(
-              "Most spending on essentials",
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-            SizedBox(height: 16),
-            Text(
-              "List of transactions in this category",
-              style: TextStyle(fontSize: 16),
-            ),
-            SizedBox(height: 16),
-            Text(
-              "Total Expense: ₹15,000",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 24), // Adjusted spacing
-            Expanded(
-              child: LineChart(
-                LineChartData(
-                  gridData: FlGridData(show: true),
-                  titlesData: FlTitlesData(
-                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: true),
-                    ),
-                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        getTitlesWidget: (value, meta) {
-                          const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May'];
-                          if(value%1==0){
-                            return Text((labels[value.toInt()]));
-                          }
-                          return const SizedBox.shrink();
-                        },
-                        interval: 1,
-                        reservedSize: 30,
-                      ),
-                    ),
-                  ),
-                  borderData: FlBorderData(show: true),
-                  minX: 0,
-                  maxX: 4,
-                  minY: 0,
-                  maxY: 9,
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: [
-                        FlSpot(0, 3),
-                        FlSpot(1, 5),
-                        FlSpot(2, 7),
-                        FlSpot(3, 4),
-                        FlSpot(4, 8),
-                      ],
-                      isCurved: true,
-                      barWidth: 4,
-                      color: Colors.green,
-                      belowBarData: BarAreaData(
-                        show: true,
-                        color: Colors.green.withOpacity(0.3),
-                      ),
-                    )
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+      body: _buildBody(),
       bottomNavigationBar: BottomNavigationBar(
         selectedItemColor: Colors.green,
         unselectedItemColor: Colors.grey,
         currentIndex: 1,
         onTap: (int index) {
-          if (index == 0) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => HomePage()),
-            );
-          }
-          else if (index == 1) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => CategoriesPage()),
-            );
-          }
-          else if (index == 2) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => AiRecommendationPage()),
-            );
-          }
-          else if (index == 3) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => MonthlySummaryPage()),
-            );
-          }
-          else if (index == 4) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => SettingsPage()),
-            );
-          }
+          if (index == 1) return;
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) {
+              switch (index) {
+                case 0: return HomePage();
+                case 2: return AiRecommendationPage();
+                case 3: return MonthlySummaryPage();
+                case 4: return SettingsPage();
+                default: return HomePage();
+              }
+            }),
+          );
         },
         items: const [
           BottomNavigationBarItem(

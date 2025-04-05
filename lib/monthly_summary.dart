@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'dart:async';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'home_page.dart';
 import 'categories_page.dart';
 import 'ai_recommendation.dart';
 import 'settings.dart';
+import 'models/monthly_summary_data.dart';
+import 'services/summary_data_service.dart';
+import 'dart:convert';
+
 
 class MonthlySummaryPage extends StatefulWidget {
   @override
@@ -12,41 +19,72 @@ class MonthlySummaryPage extends StatefulWidget {
 
 class _MonthlySummaryPageState extends State<MonthlySummaryPage> {
   String? selectedCategory;
-  final Map<String, Color> categoryColors = {
-    'Shopping': Colors.green,
-    'Travel': Colors.purple,
-    'Food': Colors.orange,
-    'Entertainment': Colors.red,
-    'Subscriptions': Colors.brown,
-    'Savings': Colors.blue,
-    'Essentials': Colors.grey,
-    'Miscellaneous': Colors.yellow,
-  };
+  List<MonthlySummaryData> _summaryData = [];
+  Timer? _timer;
+  bool _isLoading = true;
+  String _errorMessage = '';
+
+  final String baseUrl = 'http://192.168.100.107:3000/api'; // Change to your IP/backend
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchData();
+    _setupPolling();
+  }
+
+  void _setupPolling() {
+    _timer = Timer.periodic(Duration(seconds: 30), (_) => _fetchData());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/monthly-summary'));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> responseData = json.decode(response.body);
+        final List<MonthlySummaryData> data = responseData
+            .map((item) => MonthlySummaryData.fromJson(item))
+            .toList();
+
+        setState(() {
+          _summaryData = data;
+          _isLoading = false;
+        });
+      } else {
+        throw Exception('Failed to fetch data from server');
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = e.toString();
+      });
+    }
+  }
 
   List<PieChartSectionData> getSections() {
-    return categoryColors.keys.map((category) {
-      final isSelected = selectedCategory == null || selectedCategory == category;
+    return _summaryData.map((data) {
+      final color = Color(int.parse(data.colorHex.replaceFirst('#', '0xff')));
+      final isSelected = selectedCategory == null || selectedCategory == data.category;
+
       return PieChartSectionData(
-        value: _getValueForCategory(category),
+        value: data.value,
         title: '',
-        color: isSelected ? categoryColors[category] : categoryColors[category]!.withOpacity(0.2),
+        color: isSelected ? color : color.withOpacity(0.2),
         radius: isSelected ? 115 : 110,
       );
     }).toList();
-  }
-
-  double _getValueForCategory(String category) {
-    switch (category) {
-      case 'Shopping': return 12;
-      case 'Travel': return 200;
-      case 'Food': return 19;
-      case 'Entertainment': return 263;
-      case 'Subscriptions': return 10;
-      case 'Savings': return 430;
-      case 'Essentials': return 20;
-      case 'Miscellaneous': return 57;
-      default: return 0;
-    }
   }
 
   @override
@@ -64,7 +102,11 @@ class _MonthlySummaryPageState extends State<MonthlySummaryPage> {
           color: Colors.black,
         ),
       ),
-      body: Padding(
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : _errorMessage.isNotEmpty
+          ? Center(child: Text(_errorMessage))
+          : Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,10 +117,10 @@ class _MonthlySummaryPageState extends State<MonthlySummaryPage> {
                   value: null,
                   child: Text('Select'),
                 ),
-                ...categoryColors.keys.map((category) => DropdownMenuItem(
-                  value: category,
-                  child: Text(category),
-                ))
+                ..._summaryData.map((data) => DropdownMenuItem(
+                  value: data.category,
+                  child: Text('${data.category} (${data.range})'),
+                )),
               ],
               onChanged: (value) => setState(() => selectedCategory = value),
               value: selectedCategory,
@@ -86,7 +128,6 @@ class _MonthlySummaryPageState extends State<MonthlySummaryPage> {
               isExpanded: true,
               underline: Container(height: 1, color: Colors.grey.shade300),
             ),
-            // ... Rest of the body remains unchanged
             SizedBox(height: 20),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,23 +152,26 @@ class _MonthlySummaryPageState extends State<MonthlySummaryPage> {
                 border: Border.all(color: Colors.grey.shade200),
               ),
               child: Column(
-                children: categoryColors.entries.map((entry) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 20,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          color: entry.value,
-                          shape: BoxShape.circle,
+                children: _summaryData.map((data) {
+                  final color = Color(int.parse(data.colorHex.replaceFirst('#', '0xff')));
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                          ),
                         ),
-                      ),
-                      SizedBox(width: 8),
-                      Text(entry.key, style: TextStyle(fontSize: 12)),
-                    ],
-                  ),
-                )).toList(),
+                        SizedBox(width: 8),
+                        Text('${data.category} (${data.range})', style: TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                  );
+                }).toList(),
               ),
             ),
             SizedBox(height: 20),
@@ -147,7 +191,6 @@ class _MonthlySummaryPageState extends State<MonthlySummaryPage> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        // ... Bottom navigation bar remains unchanged
         selectedItemColor: Colors.green,
         unselectedItemColor: Colors.grey,
         currentIndex: 3,

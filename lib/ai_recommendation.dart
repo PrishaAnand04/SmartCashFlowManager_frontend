@@ -1,23 +1,191 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'dart:async';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'home_page.dart';
 import 'categories_page.dart';
 import 'monthly_summary.dart';
 import 'settings.dart';
+import 'package:provider/provider.dart';
+import 'models/ai_category_data.dart';
+import 'models/ai_recommendation.dart';
+import 'services/ai_recommendation_service.dart';
 
-class AiRecommendationPage extends StatelessWidget {
-  // Sample data for the chart (current vs recommended)
-  final Map<String, List<double>> categoryData = {
-    'Food': [4500, 3500],
-    'Lifestyle': [3000, 2200],
-    'Shopping': [2500, 1800],
-    'Misc.': [1500, 1000],
-    'Subscription': [800, 500],
-    'Travel': [2000, 1500],
-  };
+class AiRecommendationPage extends StatefulWidget {
+  @override
+  _AiRecommendationPageState createState() => _AiRecommendationPageState();
+}
 
+class _AiRecommendationPageState extends State<AiRecommendationPage> {
+  late AIRecommendationService _aiService;
+  List<AICategoryData> _categoryData = [];
+  List<AIRecommendation> _textRecommendations = [];
+  bool _isLoading = true;
+  String _errorMessage = '';
+  Timer? _timer;
   final Color currentColor = Colors.blue[400]!;
   final Color recommendedColor = Colors.green[400]!;
+
+  @override
+  void initState() {
+    super.initState();
+    _aiService = AIRecommendationService(baseUrl: 'http://192.168.100.107:3000');
+    _loadData();
+    _setupPolling();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final results = await Future.wait([
+        _aiService.getAICategoryData(),
+        _aiService.getTextRecommendations(),
+      ]);
+
+      final categories = results[0] as List<AICategoryData>;
+      final recommendations = results[1] as List<AIRecommendation>;
+
+      setState(() {
+        _categoryData = categories;
+        _textRecommendations = recommendations;
+        _isLoading = false;
+        _errorMessage = '';
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = e.toString();
+      });
+    }
+  }
+
+  void _setupPolling() {
+    _timer = Timer.periodic(Duration(seconds: 30), (timer) {
+      if (!mounted) return;
+      _loadData();
+    });
+  }
+
+  double _calculateMaxY() {
+    if (_categoryData.isEmpty) return 5000;
+    final maxCurrent = _categoryData.map((e) => e.current).reduce((a, b) => a > b ? a : b);
+    final maxRecommended = _categoryData.map((e) => e.recommended).reduce((a, b) => a > b ? a : b);
+    return (maxCurrent > maxRecommended ? maxCurrent : maxRecommended) * 1.2;
+  }
+
+  Widget _buildChart() {
+    return BarChart(
+      BarChartData(
+        alignment: BarChartAlignment.spaceAround,
+        maxY: _calculateMaxY(),
+        barTouchData: BarTouchData(enabled: true),
+        titlesData: FlTitlesData(
+          show: true,
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                final index = value.toInt();
+                if (index < _categoryData.length) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(
+                      _categoryData[index].category,
+                      style: TextStyle(fontSize: 12),
+                      textAlign: TextAlign.center,
+                    ),
+                  );
+                }
+                return SizedBox.shrink();
+              },
+              reservedSize: 40,
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              interval: _calculateMaxY() / 5,
+            ),
+          ),
+          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        ),
+        gridData: FlGridData(show: false),
+        borderData: FlBorderData(show: false),
+        barGroups: _categoryData.map((category) {
+          final index = _categoryData.indexOf(category);
+          return BarChartGroupData(
+            x: index,
+            groupVertically: false,
+            barsSpace: 0,
+            barRods: [
+              BarChartRodData(
+                toY: category.current,
+                color: currentColor,
+                width: 20,
+                borderRadius: BorderRadius.circular(1.5),
+              ),
+              BarChartRodData(
+                toY: category.recommended,
+                color: recommendedColor,
+                width: 20,
+                borderRadius: BorderRadius.circular(1.5),
+              ),
+            ],
+          );
+        }).toList(),
+        groupsSpace: 24,
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorMessage.isNotEmpty) {
+      return Center(child: Text(_errorMessage));
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Spending Analysis",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 20),
+          Container(
+            height: 300,
+            child: _buildChart(),
+          ),
+          SizedBox(height: 20),
+          _buildLegend(),
+          SizedBox(height: 20),
+          Text(
+            "AI Recommendations for You",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 16),
+          ..._textRecommendations.map((recommendation) =>
+              _buildRecommendationCard(recommendation.title, recommendation.description)
+          ).toList(),
+        ],
+      ),
+    );
+  }
+
+  // Keep the existing _buildLegend, _buildLegendItem, and _buildRecommendationCard methods
+  // ... (same as original code)
 
   @override
   Widget build(BuildContext context) {
@@ -34,93 +202,7 @@ class AiRecommendationPage extends StatelessWidget {
         ),
         automaticallyImplyLeading: false,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Spending Analysis",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 20),
-            Container(
-              height: 300,
-              child: BarChart(
-                BarChartData(
-                  alignment: BarChartAlignment.spaceAround,
-                  maxY: 5000,
-                  barTouchData: BarTouchData(enabled: true),
-                  titlesData: FlTitlesData(
-                    show: true,
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        getTitlesWidget: (value, meta) {
-                          final index = value.toInt();
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: Text(
-                              categoryData.keys.elementAt(index),
-                              style: TextStyle(fontSize: 12),textAlign: TextAlign.center,
-                            ),
-                          );
-                        },
-                        reservedSize: 40,
-                      ),
-                    ),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        interval: 1000,
-                      ),
-                    ),
-                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false),),
-                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false),),
-                  ),
-                  gridData: FlGridData(show: false),
-                  borderData: FlBorderData(show: false),
-                  barGroups: categoryData.keys.map((category) {
-                    final index = categoryData.keys.toList().indexOf(category);
-                    return BarChartGroupData(
-                      x: index,
-                      groupVertically: false,
-                      barsSpace: 0,
-                      barRods: [
-                        BarChartRodData(
-                          toY: categoryData[category]![0],
-                          color: currentColor,
-                          width: 20,
-                          borderRadius: BorderRadius.circular(1.5),
-                        ),
-                        BarChartRodData(
-                          toY: categoryData[category]![1],
-                          color: recommendedColor,
-                          width: 20,
-                          borderRadius: BorderRadius.circular(1.5),
-                        ),
-                      ],
-                    );
-                  }).toList(),
-                  groupsSpace: 24
-                ),
-              ),
-            ),
-            SizedBox(height: 20),
-            _buildLegend(),
-            SizedBox(height: 20),
-            Text(
-              "AI Recommendations for You",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 16),
-            _buildRecommendationCard(
-              "Reduce Spending on Fast Food",
-              "Consider home-cooked meals to save ₹1,500 per month.",
-            ),
-          ],
-        ),
-      ),
+      body: _buildBody(),
       bottomNavigationBar: BottomNavigationBar(
         selectedItemColor: Colors.green,
         unselectedItemColor: Colors.grey,
@@ -177,7 +259,6 @@ class AiRecommendationPage extends StatelessWidget {
       ),
     );
   }
-
   Widget _buildLegend() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -225,4 +306,5 @@ class AiRecommendationPage extends StatelessWidget {
       ),
     );
   }
+
 }

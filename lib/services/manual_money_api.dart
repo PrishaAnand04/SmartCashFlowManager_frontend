@@ -1,5 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../models/manual_money_model.dart';
 
 class ManualApi{
   static const baseUrl ="http://192.168.100.107:3000/api/";
@@ -35,5 +36,25 @@ class ManualApi{
 
     }
 
+  }
+  static Future<List<Manual>> getExpenses() async {
+    try {
+      final url = Uri.parse("${baseUrl}getexpense");
+      final res = await http.get(url);
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return (data['expenses'] as List)
+            .map((e) => Manual(
+          expenseName: e['expenseName'],
+          expenseMonth: e['expenseMonth'],
+          expenseAmount: e['expenseAmount'],
+        ))
+            .toList();
+      }
+      throw Exception('Failed to load expenses');
+    } catch (e) {
+      throw e;
+    }
   }
 }

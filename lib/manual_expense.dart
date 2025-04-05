@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http; // Add this import
-import 'dart:convert'; // For JSON encoding
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'home_page.dart';
 import 'models/manual_money_model.dart';
 import 'services/manual_money_api.dart';
@@ -25,12 +25,31 @@ class ExpenseEntryPage extends StatefulWidget {
 }
 
 class _ExpenseEntryPageState extends State<ExpenseEntryPage> {
-  List<Map<String, String>> expenses = [];
+  List<Manual> expenses = [];
   bool isAddingExpense = false;
 
   final TextEditingController expenseNameController = TextEditingController();
   final TextEditingController expenseMonthController = TextEditingController();
   final TextEditingController expenseAmountController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExpenses();
+  }
+
+  Future<void> _loadExpenses() async {
+    try {
+      final loadedExpenses = await ManualApi.getExpenses();
+      setState(() {
+        expenses = loadedExpenses;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading expenses: ${e.toString()}')),
+      );
+    }
+  }
 
   void _addExpense() {
     setState(() {
@@ -38,36 +57,29 @@ class _ExpenseEntryPageState extends State<ExpenseEntryPage> {
     });
   }
 
-  // Modified: Added API call here
   Future<void> _saveExpense() async {
     if (expenseNameController.text.isNotEmpty &&
         expenseMonthController.text.isNotEmpty &&
         expenseAmountController.text.isNotEmpty) {
       try {
-        // Create data map
         final data = {
           'expenseName': expenseNameController.text,
           'expenseMonth': expenseMonthController.text,
           'expenseAmount': expenseAmountController.text,
         };
 
-        // Call API
         await ManualApi.addexpense(data);
+        await _loadExpenses();
 
-        // Update UI only after successful API call
         setState(() {
-          expenses.add(data);
           _clearControllers();
           isAddingExpense = false;
         });
 
-        // Show success feedback
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Expense saved successfully!')),
         );
-
       } catch (e) {
-        // Show error feedback
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to save expense: ${e.toString()}')),
         );
@@ -130,7 +142,6 @@ class _ExpenseEntryPageState extends State<ExpenseEntryPage> {
     );
   }
 
-  // Rest of your UI components remain the same...
   Widget _buildExpenseForm() {
     return Card(
       elevation: 4,
@@ -182,15 +193,15 @@ class _ExpenseEntryPageState extends State<ExpenseEntryPage> {
     );
   }
 
-  Widget _buildExpenseCard(Map<String, String> expense) {
+  Widget _buildExpenseCard(Manual expense) {
     return Card(
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: ListTile(
-        title: Text(expense['expenseName']!,
+        title: Text(expense.expenseName ?? '',
             style: TextStyle(fontWeight: FontWeight.bold)),
-        subtitle:
-        Text("Month: ${expense['expenseMonth']} • Amount: ₹${expense['expenseAmount']}"),
+        subtitle: Text(
+            "Month: ${expense.expenseMonth} • Amount: ₹${expense.expenseAmount}"),
       ),
     );
   }
@@ -199,7 +210,7 @@ class _ExpenseEntryPageState extends State<ExpenseEntryPage> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: _addExpense, // Simplified: Just show the form
+        onPressed: _addExpense,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.green,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

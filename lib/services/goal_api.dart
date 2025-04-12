@@ -3,7 +3,7 @@ import 'dart:convert';
 import '../models/goal_model.dart';
 
 class GoalApi {
-  static const String _baseUrl = 'http://192.168.100.107:3000/api'; // Update with your endpoint
+  static const String _baseUrl = 'http://192.168.150.107:3000/api'; // Update with your endpoint
 
   static Future<void> addGoal(Map<String, String> data) async {
     final response = await http.post(

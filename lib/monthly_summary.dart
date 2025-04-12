@@ -24,7 +24,7 @@ class _MonthlySummaryPageState extends State<MonthlySummaryPage> {
   bool _isLoading = true;
   String _errorMessage = '';
 
-  final String baseUrl = 'http://192.168.100.107:3000/api'; // Change to your IP/backend
+  final String baseUrl = 'http://192.168.150.107:3000/api'; // Change to your IP/backend
 
   @override
   void initState() {

@@ -38,7 +38,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _categoryDataService = CategoryDataService(baseUrl: 'http://192.168.100.107:3000');
+    _categoryDataService = CategoryDataService(baseUrl: 'http://192.168.150.107:3000');
     _loadCategoryData();
     _setupPolling();
   }

@@ -3,7 +3,7 @@ import 'dart:convert';
 import '../models/manual_money_model.dart';
 
 class ManualApi{
-  static const baseUrl ="http://192.168.100.107:3000/api/";
+  static const baseUrl ="http://192.168.150.107:3000/api/";
 
 
   static Future<void> addexpense(Map mdata) async{

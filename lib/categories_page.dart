@@ -28,7 +28,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
   @override
   void initState() {
     super.initState();
-    _chartDataService = ChartDataService(baseUrl: 'http://192.168.100.107:3000');
+    _chartDataService = ChartDataService(baseUrl: 'http://192.168.150.107:3000');
     _loadData();
     _setupPolling();
   }

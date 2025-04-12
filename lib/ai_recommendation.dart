@@ -30,7 +30,7 @@ class _AiRecommendationPageState extends State<AiRecommendationPage> {
   @override
   void initState() {
     super.initState();
-    _aiService = AIRecommendationService(baseUrl: 'http://192.168.100.107:3000');
+    _aiService = AIRecommendationService(baseUrl: 'http://192.168.150.107:3000');
     _loadData();
     _setupPolling();
   }

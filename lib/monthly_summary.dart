@@ -11,7 +11,6 @@ import 'models/monthly_summary_data.dart';
 import 'services/summary_data_service.dart';
 import 'dart:convert';
 
-
 class MonthlySummaryPage extends StatefulWidget {
   @override
   _MonthlySummaryPageState createState() => _MonthlySummaryPageState();
@@ -24,7 +23,7 @@ class _MonthlySummaryPageState extends State<MonthlySummaryPage> {
   bool _isLoading = true;
   String _errorMessage = '';
 
-  final String baseUrl = 'http://192.168.150.107:3000/api'; // Change to your IP/backend
+  final String baseUrl = 'http://192.168.150.107:3000/api';
 
   @override
   void initState() {
@@ -111,79 +110,94 @@ class _MonthlySummaryPageState extends State<MonthlySummaryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            DropdownButton<String>(
-              items: [
-                DropdownMenuItem(
-                  value: null,
-                  child: Text('Select'),
-                ),
-                ..._summaryData.map((data) => DropdownMenuItem(
-                  value: data.category,
-                  child: Text('${data.category} (${data.range})'),
-                )),
-              ],
-              onChanged: (value) => setState(() => selectedCategory = value),
-              value: selectedCategory,
-              hint: Text('Select Category'),
-              isExpanded: true,
-              underline: Container(height: 1, color: Colors.grey.shade300),
-            ),
-            SizedBox(height: 20),
+            // Fixed Header Section
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  "Largest Expense: ₹5,000 on Essentials",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                DropdownButton<String>(
+                  items: [
+                    DropdownMenuItem(
+                      value: null,
+                      child: Text('Select'),
+                    ),
+                    ..._summaryData.map((data) => DropdownMenuItem(
+                      value: data.category,
+                      child: Text('${data.category} (${data.range})'),
+                    )),
+                  ],
+                  onChanged: (value) => setState(() => selectedCategory = value),
+                  value: selectedCategory,
+                  hint: Text('Select Category'),
+                  isExpanded: true,
+                  underline: Container(height: 1, color: Colors.grey.shade300),
                 ),
-                SizedBox(height: 8),
-                Text(
-                  "You've saved ₹10,000 more this month than last.",
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                SizedBox(height: 20),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Largest Expense: ₹5,000 on Essentials",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      "You've saved ₹10,000 more this month than last.",
+                      style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                    ),
+                  ],
                 ),
+                SizedBox(height: 20),
               ],
             ),
-            SizedBox(height: 20),
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: Column(
-                children: _summaryData.map((data) {
-                  final color = Color(int.parse(data.colorHex.replaceFirst('#', '0xff')));
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 20,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            color: color,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Text('${data.category} (${data.range})', style: TextStyle(fontSize: 12)),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            SizedBox(height: 20),
+            // Scrollable Content Section
             Expanded(
-              child: Center(
-                child: PieChart(
-                  PieChartData(
-                    sections: getSections(),
-                    sectionsSpace: 0,
-                    centerSpaceRadius: 0,
-                    startDegreeOffset: -90,
-                  ),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Column(
+                        children: _summaryData.map((data) {
+                          final color = Color(int.parse(data.colorHex.replaceFirst('#', '0xff')));
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    color: color,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Text('${data.category} (${data.range})',
+                                    style: TextStyle(fontSize: 12)),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                    Container(
+                      height: 300,
+                      child: PieChart(
+                        PieChartData(
+                          sections: getSections(),
+                          sectionsSpace: 0,
+                          centerSpaceRadius: 0,
+                          startDegreeOffset: -90,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

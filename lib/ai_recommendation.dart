@@ -95,22 +95,41 @@ class _AiRecommendationPageState extends State<AiRecommendationPage> {
                 if (index < _categoryData.length) {
                   return Padding(
                     padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      _categoryData[index].category,
-                      style: TextStyle(fontSize: 12),
-                      textAlign: TextAlign.center,
+                    child: Transform.rotate(
+                      angle: -0.5,
+                      child: Text(
+                        _categoryData[index].category,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.visible,
+                      ),
                     ),
                   );
                 }
                 return SizedBox.shrink();
               },
-              reservedSize: 40,
+              reservedSize: 60,
             ),
           ),
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              interval: _calculateMaxY() / 5,
+              interval: _calculateMaxY() / 4,
+              getTitlesWidget: (value, meta) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: Text(
+                    value.toInt().toString(),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                );
+              },
             ),
           ),
           rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -156,36 +175,35 @@ class _AiRecommendationPageState extends State<AiRecommendationPage> {
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Spending Analysis",
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 20),
-          Container(
-            height: 300,
-            child: _buildChart(),
-          ),
-          SizedBox(height: 20),
-          _buildLegend(),
-          SizedBox(height: 20),
-          Text(
-            "AI Recommendations for You",
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 16),
-          ..._textRecommendations.map((recommendation) =>
-              _buildRecommendationCard(recommendation.title, recommendation.description)
-          ).toList(),
-        ],
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Spending Analysis",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 20),
+            Container(
+              height: 300,
+              child: _buildChart(),
+            ),
+            SizedBox(height: 20),
+            _buildLegend(),
+            SizedBox(height: 20),
+            Text(
+              "AI Recommendations for You",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 16),
+            ..._textRecommendations.map((recommendation) =>
+                _buildRecommendationCard(recommendation.title, recommendation.description)
+            ).toList(),
+          ],
+        ),
       ),
     );
   }
-
-  // Keep the existing _buildLegend, _buildLegendItem, and _buildRecommendationCard methods
-  // ... (same as original code)
 
   @override
   Widget build(BuildContext context) {
@@ -259,6 +277,7 @@ class _AiRecommendationPageState extends State<AiRecommendationPage> {
       ),
     );
   }
+
   Widget _buildLegend() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -306,5 +325,4 @@ class _AiRecommendationPageState extends State<AiRecommendationPage> {
       ),
     );
   }
-
 }

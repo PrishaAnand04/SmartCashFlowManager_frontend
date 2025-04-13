@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'dart:async';  // Add this line
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
@@ -9,8 +9,8 @@ import 'ai_recommendation.dart';
 import 'monthly_summary.dart';
 import 'settings.dart';
 import 'package:provider/provider.dart';
-import 'models/monthly_chart_data.dart'; // Renamed model
-import 'services/chart_data_service.dart'; // Renamed service
+import 'models/monthly_chart_data.dart';
+import 'services/chart_data_service.dart';
 
 class CategoriesPage extends StatefulWidget {
   @override
@@ -18,8 +18,8 @@ class CategoriesPage extends StatefulWidget {
 }
 
 class _CategoriesPageState extends State<CategoriesPage> {
-  late ChartDataService _chartDataService; // Renamed service
-  List<MonthlyChartData> _chartData = []; // Renamed model list
+  late ChartDataService _chartDataService;
+  List<MonthlyChartData> _chartData = [];
   double _totalSpent = 0;
   bool _isLoading = true;
   String _errorMessage = '';
@@ -68,7 +68,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
   double _calculateMaxY() {
     if (_chartData.isEmpty) return 10000;
     final maxValue = _chartData.map((e) => e.value).reduce((a, b) => a > b ? a : b);
-    return (maxValue * 1.2).ceilToDouble();
+    return (maxValue * 1.5).ceilToDouble();
   }
 
   Widget _buildChart() {
@@ -80,10 +80,17 @@ class _CategoriesPageState extends State<CategoriesPage> {
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
+              interval: _calculateMaxY() / 3,
               getTitlesWidget: (value, meta) {
-                return Text('₹${value.toInt()}');
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: Text(
+                    '₹${value.toInt()}',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                );
               },
-              reservedSize: 40,
+              reservedSize: 45,
             ),
           ),
           rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -92,15 +99,27 @@ class _CategoriesPageState extends State<CategoriesPage> {
               showTitles: true,
               getTitlesWidget: (value, meta) {
                 if (value.toInt() < _chartData.length) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(_chartData[value.toInt()].month),
-                  );
+                  try {
+                    final date = DateFormat('MMMM y').parse(_chartData[value.toInt()].month);
+                    return Transform.rotate(
+                      angle: -0.785, // -45 degrees in radians
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 16.0),
+                        child: Text(
+                          DateFormat('MMM').format(date),
+                          style: TextStyle(fontSize: 10),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    );
+                  } catch (e) {
+                    return const SizedBox.shrink();
+                  }
                 }
                 return const SizedBox.shrink();
               },
               interval: 1,
-              reservedSize: 30,
+              reservedSize: 40,
             ),
           ),
         ),
@@ -174,7 +193,12 @@ class _CategoriesPageState extends State<CategoriesPage> {
   String _getMostSpendingCategory() {
     if (_chartData.isEmpty) return 'essentials';
     final maxEntry = _chartData.reduce((a, b) => a.value > b.value ? a : b);
-    return maxEntry.month;
+    try {
+      final date = DateFormat('MMMM y').parse(maxEntry.month);
+      return DateFormat('MMM').format(date);
+    } catch (e) {
+      return maxEntry.month;
+    }
   }
 
   @override

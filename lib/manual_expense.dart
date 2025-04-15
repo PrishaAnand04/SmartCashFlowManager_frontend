@@ -27,10 +27,21 @@ class ExpenseEntryPage extends StatefulWidget {
 class _ExpenseEntryPageState extends State<ExpenseEntryPage> {
   List<Manual> expenses = [];
   bool isAddingExpense = false;
+  String? selectedCategory;
 
-  final TextEditingController expenseNameController = TextEditingController();
   final TextEditingController expenseMonthController = TextEditingController();
   final TextEditingController expenseAmountController = TextEditingController();
+
+  final List<String> categories = [
+    'Saving',
+    'Shopping',
+    'Food',
+    'Travel',
+    'Misc.',
+    'Essential',
+    'Lifestyle',
+    'Subscription'
+  ];
 
   @override
   void initState() {
@@ -58,12 +69,12 @@ class _ExpenseEntryPageState extends State<ExpenseEntryPage> {
   }
 
   Future<void> _saveExpense() async {
-    if (expenseNameController.text.isNotEmpty &&
+    if (selectedCategory != null &&
         expenseMonthController.text.isNotEmpty &&
         expenseAmountController.text.isNotEmpty) {
       try {
         final data = {
-          'expenseName': expenseNameController.text,
+          'expenseName': selectedCategory,
           'expenseMonth': expenseMonthController.text,
           'expenseAmount': expenseAmountController.text,
         };
@@ -74,6 +85,7 @@ class _ExpenseEntryPageState extends State<ExpenseEntryPage> {
         setState(() {
           _clearControllers();
           isAddingExpense = false;
+          selectedCategory = null;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -84,11 +96,15 @@ class _ExpenseEntryPageState extends State<ExpenseEntryPage> {
           SnackBar(content: Text('Failed to save expense: ${e.toString()}')),
         );
       }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please fill all fields and select a category')),
+      );
     }
   }
 
   void _clearControllers() {
-    expenseNameController.clear();
+    selectedCategory = null;
     expenseMonthController.clear();
     expenseAmountController.clear();
   }
@@ -151,7 +167,7 @@ class _ExpenseEntryPageState extends State<ExpenseEntryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildTextField("Expense Name", expenseNameController),
+            _buildCategoryDropdown(),
             _buildTextField("Expense Month", expenseMonthController),
             _buildTextField("Expense Amount", expenseAmountController,
                 keyboardType: TextInputType.number),
@@ -174,6 +190,31 @@ class _ExpenseEntryPageState extends State<ExpenseEntryPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryDropdown() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: DropdownButtonFormField<String>(
+        value: selectedCategory,
+        decoration: InputDecoration(
+          labelText: "Category",
+          border: OutlineInputBorder(),
+        ),
+        items: categories.map((String category) {
+          return DropdownMenuItem<String>(
+            value: category,
+            child: Text(category),
+          );
+        }).toList(),
+        onChanged: (String? newValue) {
+          setState(() {
+            selectedCategory = newValue;
+          });
+        },
+        validator: (value) => value == null ? 'Please select a category' : null,
       ),
     );
   }

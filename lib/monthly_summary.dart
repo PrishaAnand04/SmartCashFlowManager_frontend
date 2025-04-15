@@ -22,6 +22,7 @@ class _MonthlySummaryPageState extends State<MonthlySummaryPage> {
   Timer? _timer;
   bool _isLoading = true;
   String _errorMessage = '';
+  int touchedIndex = -1;
 
   final String baseUrl = 'http://192.168.150.107:3000/api';
 
@@ -72,22 +73,32 @@ class _MonthlySummaryPageState extends State<MonthlySummaryPage> {
     }
   }
 
-  List<PieChartSectionData> getSections() {
-    return _summaryData.map((data) {
+  List<PieChartSectionData> getSections(double total) {
+    return _summaryData.asMap().entries.map((entry) {
+      final index = entry.key;
+      final data = entry.value;
       final color = Color(int.parse(data.colorHex.replaceFirst('#', '0xff')));
       final isSelected = selectedCategory == null || selectedCategory == data.category;
+      final isTouched = index == touchedIndex;
 
       return PieChartSectionData(
         value: data.value,
-        title: '',
+        title: isTouched ? '${(data.value / total * 100).toStringAsFixed(1)}%' : '',
         color: isSelected ? color : color.withOpacity(0.2),
-        radius: isSelected ? 115 : 110,
+        radius: isTouched ? 125 : (isSelected ? 150 : 125),
+        titleStyle: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
       );
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    final total = _summaryData.fold(0.0, (sum, data) => sum + data.value);
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Expected Monthly Expenses'),
@@ -110,7 +121,6 @@ class _MonthlySummaryPageState extends State<MonthlySummaryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Fixed Header Section
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -149,7 +159,6 @@ class _MonthlySummaryPageState extends State<MonthlySummaryPage> {
                 SizedBox(height: 20),
               ],
             ),
-            // Scrollable Content Section
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
@@ -188,13 +197,62 @@ class _MonthlySummaryPageState extends State<MonthlySummaryPage> {
                     SizedBox(height: 20),
                     Container(
                       height: 300,
-                      child: PieChart(
-                        PieChartData(
-                          sections: getSections(),
-                          sectionsSpace: 0,
-                          centerSpaceRadius: 0,
-                          startDegreeOffset: -90,
-                        ),
+                      child: Stack(
+                        children: [
+                          PieChart(
+                            PieChartData(
+                              pieTouchData: PieTouchData(
+                                touchCallback: (FlTouchEvent event, PieTouchResponse? response) {
+                                  setState(() {
+                                    if (event.isInterestedForInteractions &&
+                                        response != null &&
+                                        response.touchedSection != null) {
+                                      touchedIndex = response.touchedSection!.touchedSectionIndex;
+                                    } else {
+                                      touchedIndex = -1;
+                                    }
+                                  });
+                                },
+                              ),
+                              sections: getSections(total),
+                              sectionsSpace: 0,
+                              centerSpaceRadius: 0,
+                              startDegreeOffset: -90,
+                            ),
+                          ),
+                          Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                if (touchedIndex != -1 && touchedIndex < _summaryData.length)
+                                  Text(
+                                    '${(_summaryData[touchedIndex].value / total * 100).toStringAsFixed(1)}%',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                if (touchedIndex != -1 && touchedIndex < _summaryData.length)
+                                  Text(
+                                    _summaryData[touchedIndex].category,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                if (touchedIndex == -1)
+                                  Text(
+                                    'Tap to view',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

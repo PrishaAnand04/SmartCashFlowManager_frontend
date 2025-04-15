@@ -94,7 +94,7 @@ class _AiRecommendationPageState extends State<AiRecommendationPage> {
                 final index = value.toInt();
                 if (index < _categoryData.length) {
                   return Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
+                    padding: const EdgeInsets.only(top: 20.0),
                     child: Transform.rotate(
                       angle: -0.5,
                       child: Text(
@@ -111,16 +111,17 @@ class _AiRecommendationPageState extends State<AiRecommendationPage> {
                 }
                 return SizedBox.shrink();
               },
-              reservedSize: 60,
+              reservedSize: 80,
             ),
           ),
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              interval: _calculateMaxY() / 4,
+              interval: _calculateMaxY() / 4, // Reduced intervals to declutter
+              reservedSize: 40, // Ensures enough space for full label
               getTitlesWidget: (value, meta) {
                 return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
+                  padding: const EdgeInsets.only(right: 8.0, top: 4.0), // Moved label slightly down
                   child: Text(
                     value.toInt().toString(),
                     style: TextStyle(
@@ -186,6 +187,7 @@ class _AiRecommendationPageState extends State<AiRecommendationPage> {
             SizedBox(height: 20),
             Container(
               height: 300,
+              margin: EdgeInsets.only(bottom: 20),
               child: _buildChart(),
             ),
             SizedBox(height: 20),

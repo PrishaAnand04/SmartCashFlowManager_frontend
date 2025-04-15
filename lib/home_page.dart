@@ -12,6 +12,8 @@ import 'manual_expense.dart';
 import 'package:logger/logger.dart';
 import 'models/category_chart_data.dart';
 import 'services/category_data_service.dart';
+import 'models/ai_recommendation.dart';
+import 'services/ai_recommendation_service.dart';
 
 final logger = Logger();
 
@@ -30,16 +32,22 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   late CategoryDataService _categoryDataService;
+  late AIRecommendationService _aiRecommendationService;
   List<CategoryChartData> _categoryData = [];
+  List<AIRecommendation> _recommendations = [];
   bool _isLoading = true;
+  bool _isRecommendationsLoading = true;
   String _errorMessage = '';
+  String _recommendationsError = '';
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _categoryDataService = CategoryDataService(baseUrl: 'http://192.168.150.107:3000');
+    _aiRecommendationService = AIRecommendationService(baseUrl: 'http://192.168.150.107:3000');
     _loadCategoryData();
+    _loadRecommendations();
     _setupPolling();
   }
 
@@ -65,10 +73,27 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _loadRecommendations() async {
+    try {
+      final data = await _aiRecommendationService.getTextRecommendations();
+      setState(() {
+        _recommendations = data.where((rec) => rec.title == "Recommendations").toList();
+        _isRecommendationsLoading = false;
+        _recommendationsError = '';
+      });
+    } catch (e) {
+      setState(() {
+        _isRecommendationsLoading = false;
+        _recommendationsError = 'Failed to load recommendations: ${e.toString()}';
+      });
+    }
+  }
+
   void _setupPolling() {
     _timer = Timer.periodic(Duration(seconds: 30), (timer) {
       if (!mounted) return;
       _loadCategoryData();
+      _loadRecommendations();
     });
   }
 
@@ -80,7 +105,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   double _calculateMaxY() {
-    if (_categoryData.isEmpty) return 33; // Default 30 + 3
+    if (_categoryData.isEmpty) return 33;
     final maxValue = _categoryData.map((e) => e.value).reduce((a, b) => a > b ? a : b);
     return maxValue + 3;
   }
@@ -245,18 +270,33 @@ class _HomePageState extends State<HomePage> {
               ),
               SizedBox(height: 24),
               Text(
-                "Recommended Suggestions",
+                "Recommendations",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 8),
-              _buildSuggestionCard(
-                "Spend ₹2,000 less on food & dining",
-                "View Details",
-              ),
-              _buildSuggestionCard(
-                "Plan your grocery budget under Essentials",
-                "Explore Alternatives",
-              ),
+              if (_recommendationsError.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(
+                    _recommendationsError,
+                    style: TextStyle(color: Colors.red),
+                  ),
+                )
+              else if (_isRecommendationsLoading)
+                Center(child: CircularProgressIndicator())
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  itemCount: _recommendations.length,
+                  itemBuilder: (context, index) {
+                    final recommendation = _recommendations[index];
+                    return _buildRecommendationCard(
+                      recommendation.title,
+                      recommendation.description,
+                    );
+                  },
+                ),
               SizedBox(height: 24),
               Row(
                 children: [
@@ -347,18 +387,22 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildSuggestionCard(String title, String action) {
+  Widget _buildRecommendationCard(String title, String description) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: ListTile(
-        tileColor: Colors.grey[200],
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        title: Text(title),
-        trailing: Text(
-          action,
-          style: TextStyle(color: Colors.green),
+      child: Card(
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                description,
+                style: TextStyle(fontSize: 14),
+              ),
+            ],
+          ),
         ),
       ),
     );
